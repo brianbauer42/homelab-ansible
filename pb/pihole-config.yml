@@ -1,0 +1,14 @@
+# TODO
+
+# https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation/
+# install cloudflared repo
+# download cloudflared
+
+# https://docs.pi-hole.net/guides/dns/cloudflared/
+# create cloudflared user
+# create cloudflared service
+# enable cloudflared service
+
+# install pihole
+# set pihole admin password
+# configure pihole to use custom upstream dns 127.0.0.1#5053

@@ -1,0 +1,159 @@
+--- # install cockpit
+- hosts:
+  - nas
+  become: yes
+
+  tasks:
+    - name: "Install Cockpit"
+      include_role: 
+        name: linux-system-roles.cockpit
+      vars:
+        cockpit_packages:
+        - cockpit
+        - cockpit-bridge
+        - cockpit-storaged
+        - cockpit-networkmanager
+        - cockpit-packagekit
+        - cockpit-ws
+        cockpit_enabled: yes
+        cockpit_started: yes
+        cockpit_port: 443
+        cockpit_manage_firewall: no
+        cockpit_config:
+          WebService:
+            Origins: "http://nas.bauer.mt https://nas.bauer.mt https://192.168.1.6"
+            AllowUnencrypted: true
+
+    # # Didn't work...
+    # - name: Add Apt signing key for 45Drives Repo
+    #   ansible.builtin.apt_key:
+    #     url: https://repo.45drives.com/key/gpg.asc
+    #     state: present
+
+    ## Also didn't work
+    # - name: Add Apt signing key for 45Drives Repo
+    #   ansible.builtin.get_url:
+    #     url: https://repo.45drives.com/key/gpg.asc
+    #     dest: /usr/share/keyrings/45drives-archive-keyring.gpg
+    #     mode: "644"
+    #     owner: root
+    #     group: root
+
+    # I gave up and used the 45 drives repo setup script
+    #  curl -sSL https://repo.45drives.com/setup | sudo bash 
+
+    - name: Download 45Drives apt repo sources.list
+      ansible.builtin.get_url:
+        url: https://repo.45drives.com/lists/45drives.sources
+        dest: /etc/apt/sources.list.d/45drives.sources
+        mode: "644"
+        owner: root
+        group: root
+
+    #TODO Don't be such a brute
+    - name: Enable non-free apt repositories
+      ansible.builtin.copy:
+        src: ./nfs/debian-11-sources.list
+        dest: /etc/apt/sources.list
+        owner: root
+        group: root
+        mode: '0644'
+
+    # need to reboot here? or reload apt keys I think...
+      
+    - name: Update and upgrade apt packages
+      ansible.builtin.apt:
+        upgrade: yes
+        update_cache: yes
+
+    - name: Install NFS packages
+      ansible.builtin.package:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - nfs-kernel-server
+        - nfs-common
+
+    - name: Install more cockpit plugins from 45Drives repository
+      ansible.builtin.package:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - cockpit-file-sharing
+        - cockpit-navigator
+        - cockpit-identities
+
+    # - name: Configure Firewall for Web Console
+    #   include_role:
+    #     name: linux-system-roles.firewall
+    #   vars:
+    #     firewall:
+    #       service: cockpit
+    #       state: enabled
+
+
+    # groups for nfs access
+    - name: Ensure group "bigboi" exists with correct gid
+      ansible.builtin.group:
+        name: bigboi-access
+        state: present
+        gid: 6969
+
+    - name: Ensure group "nfs" exists with correct gid
+      ansible.builtin.group:
+        name: nfs-access
+        state: present
+        gid: 69
+
+    - name: Create user for kubernetes
+      ansible.builtin.user:
+        name: kube
+        state: present
+        append: true
+        groups:
+          - nfs-access
+          - bigboi-access
+       
+    - name: Create user for big drive access
+      ansible.builtin.user:
+        name: bigboi
+        state: present
+        append: true
+        groups:
+          - bigboi-access
+
+    - name: Give myself nfs groups
+      ansible.builtin.user:
+        name: brian
+        state: present
+        append: true
+        groups:
+          - nfs-access
+          - bigboi-access
+
+    - name: Create a mountable directory for k8s if it !exist
+      file:
+        path: /mnt/mirror/kube
+        state: directory
+        owner: brian
+        group: kube
+        mode: '0764'
+
+    - name: Create a mountable directory for bigboi if !exist
+      file:
+        path: /mnt/bigboi/torrents
+        state: directory
+        owner: brian
+        group: bigboi
+        mode: '0764'
+
+    - name: Copy exports file.
+      template:
+        src: ./nfs/exports
+        dest: /etc/exports
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: NFS apply configuration changes
+      shell: systemctl reload nfs;exportfs -a

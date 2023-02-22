@@ -1,0 +1,98 @@
+--- # k8s prep, mostly from https://kubernetes.io/blog/2019/03/15/kubernetes-setup-using-ansible-and-vagrant/
+- hosts:
+  - kubeall
+  become: yes
+
+  vars:
+    docker_packages:
+      - docker-ce 
+      - docker-ce-cli 
+      - containerd.io
+    k8s_packages:
+      - kubelet 
+      - kubeadm 
+      - kubectl
+      
+  tasks:
+  - name: Add an apt signing key for Docker
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: Add apt repository for stable version
+    apt_repository:
+      repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+      state: present
+
+  - name: Install docker and its dependecies
+    apt: 
+      name: "{{ docker_packages }}"
+      state: present
+      update_cache: yes
+    notify:
+      - docker status
+
+  - name: Remove swapfile from /etc/fstab
+    mount:
+      name: "{{ item }}"
+      fstype: swap
+      state: absent
+    with_items:
+      - swap
+      - none
+
+  - name: Disable swap
+    command: swapoff -a
+    when: ansible_swaptotal_mb > 0
+
+  - name: Add an apt signing key for Kubernetes
+    apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+  - name: Adding apt repository for Kubernetes
+    apt_repository:
+      repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+      filename: kubernetes.list
+
+  - name: Install Kubernetes binaries
+    apt: 
+      name: "{{ k8s_packages }}"
+      state: present
+      update_cache: yes
+
+  - name: Prevent packages from being upgraded
+    dpkg_selections:
+      name: "{{ item }}"
+      selection: hold
+    loop:
+      "{{ docker_packages + k8s_packages }}"
+
+  - name: Undo packages from being upgraded
+    dpkg_selections:
+      name: "{{ item }}"
+      selection: install
+    loop:
+      - zsh
+      - git
+      - acl
+# I should do this by hand to learn for now
+
+
+  # - name: Configure node ip
+  #   lineinfile:
+  #     path: /etc/default/kubelet
+  #     line: KUBELET_EXTRA_ARGS=--node-ip={{ node_ip }}
+
+  # - name: Restart kubelet
+  #   service:
+  #     name: kubelet
+  #     daemon_reload: yes
+  #     state: restarted
+    
+
+  # handlers only run when triggered by a 'notify' (see the notify above)
+  handlers:
+   - name: docker status
+     service: name=docker state=started

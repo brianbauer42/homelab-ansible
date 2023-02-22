@@ -1,0 +1,16 @@
+# TODO
+
+# disable enterprise subscription nag screen
+# create brian user
+# set password for brian
+# assign administrator role to brian user
+
+# configure unattended upgrades
+
+# enable hardware passthrough options
+# https://pve.proxmox.com/wiki/PCI(e)_Passthrough
+
+# configure gpu passthrough
+# download latest debian template regularly
+
+# install and configure ceph... maybe
