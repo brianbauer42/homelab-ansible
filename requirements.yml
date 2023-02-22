@@ -1,3 +1,2 @@
-
-community.general
-linux-system-roles.cockpit
+- src: community.general
+- src: linux-system-roles.cockpit

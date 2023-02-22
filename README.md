@@ -1,24 +1,20 @@
-# Setting up Ansible from WSL2 Debian 11 with proxmox 7.3 and Debian 11 VM nodes in a lab environment
-## NOT NECESSARY WHEN USING A CLOUD-INIT IMAGE
-If using cloud init, set the default user as ansible and set the public key. Ansible is included in the Debian cloud image.
+# Homelab setup help
+I'm tired of doing the same old boring config over and over when I want to try some new stuff in my homelab, so I decided to start using ansible to automate the boring parts.
 
-## Prerequisites
-1. Have an SSH key configured for your machine.
-2. Have root access to other machines.
+I use Debian for pretty much everything but this probably works with Ubunto as well.
 
-## Install and configure Ansible -- 
-1. Copy your public SSH key to your target hosts if ssh password login is disabled (proxmox root user, for example, needs your key appended at ~/.ssh/authorized_keys)
-2. For the control node, run setup script in the install folder.
-`sudo ./install/1-setup-control-node.sh`
-3. Run the appropriate setup script for each target node.
-`ssh root@host 'bash -s' < ./install/2a-setup-proxmox-target.sh`
-`ssh root@host 'bash -s' < ./install/2b-setup-debian-target.sh`
-4. Run the following on the Control Node to copy the key to
-`sudo runuser -u ansible -- ssh-copy-id -i /home/ansible/.ssh/id_ed25519.pub ansible@HOST`
-5. Run the following on each Target Node to disable password authentication after the key is installed.
-`passwd brian` (set my password so I can sudo)
-`passwd ansible --delete`
+If you installed Debian or Proxmox yourself, start with the readme in `./install` to prepare ansible using shell scripts.
 
-## Run ansible playbooks
-`sudo runuser -u ansible -- ansible-playbook -i inv ./pb/debian-config.yml -K`
-The -K options won't be necessary for a cloud image
+If using a Debian cloud image, ansible is already installed there. Just pass an `ansible` user and public ssh key to your cloud-init drive.
+
+## Install ansible
+There is an install script to get ansible on your local machine or controle node in `./install`.
+
+## Install the requirements
+`ansible-galaxy install -r requirements.yml`
+
+## Runing an ansible playbook
+`ansible-playbook -i inv ./pb/debian-config.yml -K`
+ - The -K options won't be necessary for a cloud image, maybe I should also change that for the way I set up ansible account on a custom install.
+ - Prepend `sudo runuser -u ansible -- ` if you use ansible from it's own account.
+ - Make your own `inv` file
