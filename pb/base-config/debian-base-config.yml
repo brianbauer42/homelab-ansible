@@ -85,10 +85,16 @@
       users:
         - username: "{{ username }}"
           oh_my_zsh:
-            theme: robbyrussell
+            theme: homelab-server
             plugins:
               - git
               - colorize
               - jsontools
             update_mode: reminder
             update_frequency: 3
+
+  post_tasks:
+    - name: Download custom prompt for oh-my-zsh
+      get_url:
+        url: "https://raw.githubusercontent.com/brianbauer42/homelab-ansible/main/config-files/homelab-server.zsh-theme"
+        dest: "/home/{{ username }}/.oh-my-zsh/custom/themes/homelab-server.zsh-theme"
