@@ -93,13 +93,13 @@
 
 
     # groups for nfs access
-    - name: Ensure group "bigboi" exists with correct gid
+    - name: Ensure group "bigboi-access" exists with correct gid
       ansible.builtin.group:
         name: bigboi-access
         state: present
         gid: 6969
 
-    - name: Ensure group "nfs" exists with correct gid
+    - name: Ensure group "nfs-access" exists with correct gid
       ansible.builtin.group:
         name: nfs-access
         state: present
