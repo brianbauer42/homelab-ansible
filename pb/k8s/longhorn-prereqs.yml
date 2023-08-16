@@ -1,0 +1,65 @@
+--- # prepare debian k3s nodes for longhorn installation, just guessing that the control plane needs these things too?
+- hosts:
+  - k3s_homelab
+  become: yes
+
+  vars:
+    prereqs:
+      - open-iscsi
+      - bash
+      - curl
+      - grep
+      - util-linux # blkid, findmnt, lsblk
+      - nfs-common
+
+  # TODO: Set account password in vault? https://stackoverflow.com/questions/19292899/creating-a-new-user-and-password-with-ansible
+
+  tasks:
+  - name: Update and upgrade apt packages
+    apt:
+      upgrade: yes
+      update_cache: yes
+      
+  - name: Install useful packages
+    ansible.builtin.package:
+      name: "{{ item }}"
+      state: present
+    with_items: "{{ prereqs }}"
+
+  - name: check iscsid is started and enabled
+    ansible.builtin.service:
+      name: iscsid
+      enabled: true
+      state: started
+
+# prepare worker nodes for longhorn installation, it is expected these nodes have a single NVMe drive.
+- hosts:
+  - k3s_homelab_worker
+  become: yes
+
+  tasks:
+  # https://rpi4cluster.com/k3s/k3s-storage-setting/#
+  # https://stackoverflow.com/questions/69947414/ansible-check-if-disk-is-mounted-if-not-format-it
+  - name: Create storage mount directory /mnt/longhorn-disk
+    ansible.builtin.file:
+      path: /mnt/longhorn-disk
+      state: directory
+
+  - name: Create an ext4 filesystem on /dev/nvme0n1
+    community.general.filesystem:
+      fstype: ext4
+      state: present
+      dev: /dev/nvme0n1
+
+  - name: Fetch the UUID of /dev/nvme0n1
+    command: blkid -s UUID -o value /dev/nvme0n1
+    changed_when: false
+    register: blkid_out
+
+  - name: Mount /dev/nvme0n1 by UUID
+    ansible.posix.mount:
+      path: /longhorn-disk
+      src: UUID={{ blkid_out.stdout }}
+      fstype: ext4
+      opts: defaults
+      state: mounted

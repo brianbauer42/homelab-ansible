@@ -7,7 +7,7 @@ set -e
 ANSPW=$1
 apt update && apt full-upgrade -y
 apt install gnupg sudo -y
-echo "deb http://ppa.launchpad.net/ansible/ansible/ubuntu trusty main" >> /etc/apt/sources.list
+echo "deb http://ppa.launchpad.net/ansible/ansible/ubuntu jammy main" >> /etc/apt/sources.list
 apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 93C4A3FD7BB9C367
 apt update
 apt install ansible -y

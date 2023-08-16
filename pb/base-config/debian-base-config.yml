@@ -11,6 +11,8 @@
       - git
       - acl
       - gnupg
+      - vim
+      - curl
 
   # TODO: Set account password in vault? https://stackoverflow.com/questions/19292899/creating-a-new-user-and-password-with-ansible
 

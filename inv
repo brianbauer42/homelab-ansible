@@ -1,32 +1,56 @@
+# fmt: ini
 [pve]
-192.168.1.3
+192.168.69.3
+
+[mini]
+192.168.69.4
+
+[omv]
+192.168.69.5
+
+[nas]
+192.168.69.6
 
 [dns]
-192.168.1.4
+192.168.69.7
 
-[debian]
-192.168.1.4
-192.168.1.6
-192.168.1.7
-192.168.1.8
+[debian:children]
+pve
+mini
+omv
+nas
+dns
+k3s_all
 
-[cloudimg]
-192.168.1.6
-192.168.1.7
-192.168.1.8
+[cloudimg:children]
+nas
+dns
+k3s_homelab_control
+k3s_homelab_worker
 
-[kubeall]
-192.168.1.6
-192.168.1.7
-192.168.1.8
+[k3s_all:children]
+k3s_control
+k3s_homelab_worker
 
-[kubemaster]
-192.168.1.6
+[k3s_control_metal]
+192.168.69.4
 
-[kubeworker]
-192.168.1.7
-192.168.1.8
+[k3s_homelab_control]
+192.168.69.10
 
-[kubegpu]
+[k3s_control:children]
+k3s_control_metal
+k3s_homelab_control
 
+[k3s_homelab_worker]
+192.168.69.15
+192.168.69.16
+192.168.69.17
 
+[k3s_homelab:children]
+k3s_homelab_worker
+k3s_homelab_control
+
+[virtual_machines:children]
+cloudimg
+omv

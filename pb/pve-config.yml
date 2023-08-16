@@ -7,10 +7,98 @@
 
 # configure unattended upgrades
 
-# enable hardware passthrough options
-# https://pve.proxmox.com/wiki/PCI(e)_Passthrough
+# nag buster
+# wget https://raw.githubusercontent.com/foundObjects/pve-nag-buster/master/install.sh
+# bash install.sh
 
 # configure gpu passthrough
-# download latest debian template regularly
 
-# install and configure ceph... maybe
+--- # configure pve as community edition and enable passthrough features
+- hosts:
+  - pve
+  become: yes
+
+  tasks:
+  - name: Add community repository
+    apt_repository:
+      repo: deb http://download.proxmox.com/debian/pve {{ ansible_distribution_release }} pve-no-subscription
+      state: present
+
+  - name: Remove enterprise repository
+    apt_repository:
+      repo: deb http://download.proxmox.com/debian/pve {{ ansible_distribution_release }} pve-enterprise
+      state: absent
+
+  - name: Update and upgrade apt packages
+    ansible.builtin.apt:
+      upgrade: yes
+      update_cache: yes
+
+  # From bgondy answer https://stackoverflow.com/questions/55844981/ansible-insert-word-in-grub-cmdline
+  - name: ensure iommu is enabled in default grub command line
+    lineinfile:
+      path: "/etc/default/grub"
+      backrefs: true
+      regexp: '^GRUB_CMDLINE_LINUX_DEFAULT="((?:(?!intel_iommu=on).)*?)"$'
+      line: 'GRUB_CMDLINE_LINUX_DEFAULT="\1 intel_iommu=on"'
+    register: iommu_result
+
+  - name: Enable IOMMU
+    lineinfile:
+      path: /etc/default/grub
+      backrefs: true
+      regexp: '^GRUB_CMDLINE_LINUX_DEFAULT="((?:(?!iommu=pt).)*?)"$'
+      line: 'GRUB_CMDLINE_LINUX_DEFAULT="\1 iommu=pt"'
+    register: passthrough_result
+
+
+  #PCIE stuff from: https://github.com/Maghin/ansible-proxmox-pci/blob/19aeb10332cf12fc3c80a4c4a3feebd4316fb48a/roles/proxmox-pci/tasks/main.yml
+  - name: ensure vfio modules are loaded at boot
+    lineinfile:
+      path: "/etc/modules"
+      line: '{{ item }}'
+    register: vfio_result
+    with_items:
+      - vfio
+      - vfio_iommu_type1
+      - vfio_pci
+      - vfio_virqfd
+
+  - name: ensure graphics drivers are blacklisted
+    lineinfile:
+      path: "/etc/modprobe.d/blacklist.conf"
+      create: true
+      line: 'blacklist {{ item }}'
+    register: drivers_result
+    with_items:
+      - radeon
+      - nouveau
+      - nvidia
+
+  - name: ensure unsafe interrupts are allowed
+    lineinfile:
+      path: "/etc/modprobe.d/iommu_unsafe_interrupts.conf"
+      create: true
+      line: 'options vfio_iommu_type1 allow_unsafe_interrupts=1'
+    register: unsafe_interrupts_result
+
+  - name: update grub configuration (NEED REBOOT IF CHANGES... but it might happen automatically? 🤷‍♂️)
+    shell: update-grub
+    register: pci_grub_result
+    when: iommu_result.changed or
+          passthrough_result.changed or
+          vfio_result.changed or
+          drivers_result.changed or
+          unsafe_interrupts_result.changed
+    failed_when: pci_grub_result.rc != 0
+    changed_when: pci_grub_result.rc == 0
+
+  # TODO
+  # Add ansible requirement, ensure nmcli package installed, check conn_name (is it even necessary? and ethernet?) 
+  # - name: Set IPv4 DNS server address (we can then pass host setting to VMs through cloud-init)
+  #   community.general.nmcli:
+  #     conn_name: my-eth1
+  #     type: ethernet
+  #     dns4:
+  #     - 192.168.69.7
+  #     state: present

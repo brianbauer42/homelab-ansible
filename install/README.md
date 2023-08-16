@@ -1,4 +1,4 @@
-# Setting up Ansible from WSL2 Debian 11 with proxmox 7.3 and Debian 11 VM nodes in a lab environment
+# Setting up Ansible from WSL2 Debian 11 with proxmox 8 and Debian 12 VM nodes in a lab environment
 ## NOT NECESSARY WHEN USING A CLOUD-INIT IMAGE
 If using cloud init, set the default user as ansible and set the public key. Ansible is included in the Debian cloud image.
 
