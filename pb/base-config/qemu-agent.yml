@@ -1,5 +1,5 @@
 - hosts:
-  - virtual_machines
+  - cloudimg
   become: yes
 
   tasks:
