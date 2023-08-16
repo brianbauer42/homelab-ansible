@@ -22,9 +22,8 @@
       
   - name: Install useful packages
     ansible.builtin.package:
-      name: "{{ item }}"
+      name: "{{ prereqs }}"
       state: present
-    with_items: "{{ prereqs }}"
 
   - name: check iscsid is started and enabled
     ansible.builtin.service:
@@ -40,26 +39,27 @@
   tasks:
   # https://rpi4cluster.com/k3s/k3s-storage-setting/#
   # https://stackoverflow.com/questions/69947414/ansible-check-if-disk-is-mounted-if-not-format-it
-  - name: Create storage mount directory /mnt/longhorn-disk
-    ansible.builtin.file:
-      path: /mnt/longhorn-disk
-      state: directory
+  - name: Install parted
+    ansible.builtin.package:
+      name: parted
+      state: present
 
-  - name: Create an ext4 filesystem on /dev/nvme0n1
+  - name: Create a new ext4 primary partition
+    community.general.parted:
+      device: /dev/nvme0n1
+      number: 1
+      state: present
+
+  - name: Create an ext4 filesystem on /dev/nvme0n1p1
     community.general.filesystem:
       fstype: ext4
       state: present
-      dev: /dev/nvme0n1
+      dev: /dev/nvme0n1p1
 
-  - name: Fetch the UUID of /dev/nvme0n1
-    command: blkid -s UUID -o value /dev/nvme0n1
-    changed_when: false
-    register: blkid_out
-
-  - name: Mount /dev/nvme0n1 by UUID
+  - name: Mount /dev/nvme0n1p1
     ansible.posix.mount:
-      path: /longhorn-disk
-      src: UUID={{ blkid_out.stdout }}
+      path: /mnt/longhorn-disk
+      src: /dev/nvme0n1p1
       fstype: ext4
       opts: defaults
       state: mounted
