@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-dls-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fastapi-dls
+  template:
+    metadata:
+      labels:
+        app: fastapi-dls
+    spec:
+      containers:
+      - name: fastapi-dls-deployment
+        image: collinwebdesigns/fastapi-dls:latest
+        ports:
+        - containerPort: 80

@@ -64,16 +64,14 @@
       - vfio_pci
       - vfio_virqfd
 
-  - name: ensure graphics drivers are blacklisted
+  - name: blacklist open source nvidia drivers (will be using real nvidia drivers for vgpu)
     lineinfile:
       path: "/etc/modprobe.d/blacklist.conf"
       create: true
       line: 'blacklist {{ item }}'
     register: drivers_result
     with_items:
-      - radeon
       - nouveau
-      - nvidia
 
   - name: ensure unsafe interrupts are allowed
     lineinfile:
